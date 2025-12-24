@@ -1,6 +1,7 @@
 import streamlit as st
 import pickle
 import string
+import os
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
@@ -18,56 +19,41 @@ st.set_page_config(
 # Load NLP tools
 # --------------------------------------------------
 ps = PorterStemmer()
-import nltk
 
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('stopwords')
-
+# Download stopwords safely (Streamlit Cloud compatible)
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
     nltk.download('stopwords')
 
-
 # --------------------------------------------------
-# Text Preprocessing Function (UNCHANGED LOGIC)
+# Text Preprocessing Function (CLOUD SAFE)
 # --------------------------------------------------
 def transform_text(text):
     text = text.lower()
 
-    # SAFE TOKENIZATION (no nltk punkt)
-    text = text.split()
+    # Simple & safe tokenization
+    tokens = text.split()
 
-    y = []
-    for i in text:
-        if i.isalnum():
-            y.append(i)
-
-    text = y[:]
-    y.clear()
+    tokens = [word for word in tokens if word.isalnum()]
 
     stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
 
-    for i in text:
-        if i not in stop_words and i not in string.punctuation:
-            y.append(i)
+    tokens = [ps.stem(word) for word in tokens]
 
-    text = y[:]
-    y.clear()
-
-    for i in text:
-        y.append(ps.stem(i))
-
-    return " ".join(y)
-
+    return " ".join(tokens)
 
 # --------------------------------------------------
-# Load Model & Vectorizer
+# Load Model & Vectorizer (GLOBAL & SAFE PATH)
 # --------------------------------------------------
-pickle.load(open('model.pkl','rb'))
-pickle.load(open('vectorizer.pkl','rb'))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(BASE_DIR, "vectorizer.pkl"), "rb") as f:
+    tfidf = pickle.load(f)
+
+with open(os.path.join(BASE_DIR, "model.pkl"), "rb") as f:
+    model = pickle.load(f)
 
 # --------------------------------------------------
 # SIDEBAR (MODEL DETAILS)
@@ -81,8 +67,6 @@ st.sidebar.markdown("""
 """)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔍 Visual Insights")
-
 show_wc = st.sidebar.checkbox("Show WordClouds")
 
 # --------------------------------------------------
@@ -96,7 +80,7 @@ st.markdown(
 st.write("Classify an email as **Spam** or **Not Spam** using Machine Learning.")
 
 # --------------------------------------------------
-# Layout Columns
+# Layout
 # --------------------------------------------------
 col1, col2 = st.columns([2, 1])
 
@@ -116,16 +100,10 @@ with col2:
         if input_sms.strip() == "":
             st.warning("Please enter email text.")
         else:
-            # Preprocess
             transformed_sms = transform_text(input_sms)
-
-            # Vectorize
             vector_input = tfidf.transform([transformed_sms])
-
-            # Predict
             result = model.predict(vector_input)[0]
 
-            # Display result
             if result == 1:
                 st.error("🚨 Spam Email Detected!")
                 st.markdown(
@@ -162,3 +140,4 @@ st.markdown(
     "<center>Built using NLP & Machine Learning | Random Forest Classifier</center>",
     unsafe_allow_html=True
 )
+

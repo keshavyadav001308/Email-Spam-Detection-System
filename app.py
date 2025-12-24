@@ -18,8 +18,18 @@ st.set_page_config(
 # Load NLP tools
 # --------------------------------------------------
 ps = PorterStemmer()
-nltk.download('punkt')
-nltk.download('stopwords')
+import nltk
+
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+
 
 # --------------------------------------------------
 # Text Preprocessing Function (UNCHANGED LOGIC)

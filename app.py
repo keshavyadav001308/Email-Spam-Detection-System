@@ -23,7 +23,7 @@ import nltk
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    nltk.download('stopwords')
 
 try:
     nltk.data.find('corpora/stopwords')
@@ -36,7 +36,9 @@ except LookupError:
 # --------------------------------------------------
 def transform_text(text):
     text = text.lower()
-    text = nltk.word_tokenize(text)
+
+    # SAFE TOKENIZATION (no nltk punkt)
+    text = text.split()
 
     y = []
     for i in text:
@@ -46,8 +48,10 @@ def transform_text(text):
     text = y[:]
     y.clear()
 
+    stop_words = set(stopwords.words('english'))
+
     for i in text:
-        if i not in stopwords.words('english') and i not in string.punctuation:
+        if i not in stop_words and i not in string.punctuation:
             y.append(i)
 
     text = y[:]
@@ -58,11 +62,12 @@ def transform_text(text):
 
     return " ".join(y)
 
+
 # --------------------------------------------------
 # Load Model & Vectorizer
 # --------------------------------------------------
-tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
-model = pickle.load(open('model.pkl', 'rb'))
+pickle.load(open('model.pkl','rb'))
+pickle.load(open('vectorizer.pkl','rb'))
 
 # --------------------------------------------------
 # SIDEBAR (MODEL DETAILS)
